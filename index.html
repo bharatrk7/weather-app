@@ -47,23 +47,29 @@
         }
 
         // 2. SAVE CITY (New Logic)
-        async function saveCity() {
+async function saveCity() {
             const city = document.getElementById('city-display').innerText;
             if (city === "---") return alert("Get weather first!");
 
             console.log("Saving city:", city);
             
-            // We use 'POST' to send data TO the server
-            await fetch('/api/favorites', {
+            const response = await fetch('/api/favorites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ city: city })
             });
 
-            alert("Saved!");
-            loadFavorites(); // Auto-refresh the list
-        }
+            // 1. Unpack the message from the server
+            const result = await response.json();
 
+            // 2. Show THAT message to the user
+            alert(result.message);
+            
+            // 3. Only refresh the list if it was actually a success (Status 201)
+            if (response.status === 201) {
+                loadFavorites();
+            }
+        }
         // 3. LOAD FAVORITES (New Logic)
         async function loadFavorites() {
             const response = await fetch('/api/favorites');

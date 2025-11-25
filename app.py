@@ -66,11 +66,25 @@ def get_favorites():
 def add_favorite():
     new_data = request.get_json()
     city_name = new_data['city']
+    
     conn = get_db_connection()
+    
+    # 1. THE BOUNCER CHECK
+    # "Select any row where the city name matches what we are trying to save"
+    existing_city = conn.execute('SELECT * FROM favorites WHERE city = ?', (city_name,)).fetchone()
+    
+    if existing_city:
+        # If we found something, stop immediately!
+        conn.close()
+        return jsonify({"message": "City already in favorites!"}), 409 
+        # 409 is the code for "Conflict"
+    
+    # 2. If we get here, the city is new. Save it.
     conn.execute('INSERT INTO favorites (city) VALUES (?)', (city_name,))
     conn.commit()
     conn.close()
-    return jsonify({"message": "City saved!"}), 201
+    
+    return jsonify({"message": "City saved successfully!"}), 201
 
 # --- 5. SERVE HTML ---
 @app.route('/')
