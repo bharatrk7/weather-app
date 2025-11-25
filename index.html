@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Weather App</title>
+    <style>
+        body { font-family: sans-serif; padding: 50px; background-color: #f4f4f4;}
+        .box { background: white; padding: 30px; border-radius: 10px; width: 250px; box-shadow: 0 0 10px rgba(0,0,0,0.1);}
+        button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px;}
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h2>Weather Dashboard</h2>
+        <p>City: <span id="city-display">---</span></p>
+        <p>Temp: <span id="temp-display">---</span></p>
+        <p>Sky: <span id="sky-display">---</span></p>
+        <button onclick="getWeatherData()">Update Weather</button>
+    </div>
+
+    <script>
+        // --- THE PLUMBING ---
+        async function getWeatherData() {
+            console.log("Button clicked. Calling the server...");
+
+            // 1. The Pipe (Fetch)
+            // We dial the specific address of our Python function
+            const response = await fetch('http://127.0.0.1:5000/api/weather');
+            
+            // 2. The Unpacking
+            // The data arrives as raw text. We need to parse it back into an object.
+            const data = await response.json();
+            console.log("Data received:", data);
+
+            // 3. The Display
+            // We find the specific HTML tags (by ID) and inject the data
+            document.getElementById('city-display').innerText = data.city;
+            document.getElementById('temp-display').innerText = data.temperature + "°";
+            document.getElementById('sky-display').innerText = data.condition;
+        }
+    </script>
+</body>
+</html>
