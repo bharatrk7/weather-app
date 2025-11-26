@@ -39,17 +39,49 @@ def get_weather_description(code):
     }
     return weather_codes.get(code, "Unknown")
 
-@app.route('/api/weather', methods=['GET'])
-def get_weather():
-    # CHANGED: London Coordinates
-    url = "https://api.open-meteo.com/v1/forecast?latitude=51.50&longitude=-0.12&current_weather=true&temperature_unit=fahrenheit"
+# --- NEW HELPER FUNCTION ---
+def get_coordinates(city_name):
+    print(f"Looking up coordinates for: {city_name}")
+    # We use a DIFFERENT Open-Meteo URL specifically for finding cities
+    url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=en&format=json"
     
     response = requests.get(url)
+    data = response.json()
+    
+    # Safety Check: Did we find a city?
+    if not data.get('results'):
+        return None, None # Return "Nothing" if city not found
+        
+    # Grab the first result
+    first_match = data['results'][0]
+    return first_match['latitude'], first_match['longitude']
+
+# --- UPDATED WEATHER ENDPOINT ---
+@app.route('/api/weather', methods=['GET'])
+def get_weather():
+    # 1. GET THE CITY NAME FROM THE FRONTEND
+    # The frontend will send it like: /api/weather?city=Paris
+    city = request.args.get('city')
+    
+    if not city:
+        return jsonify({"error": "Please provide a city name"}), 400
+
+    # 2. STEP 1: CONVERT TEXT TO NUMBERS (Geocoding)
+    lat, lon = get_coordinates(city)
+    
+    if not lat:
+        return jsonify({"error": "City not found"}), 404
+
+    # 3. STEP 2: GET WEATHER USING NUMBERS
+    print(f"Fetching weather for {city} at {lat}, {lon}")
+    weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&temperature_unit=fahrenheit"
+    
+    response = requests.get(weather_url)
     data = response.json()
     current_weather = data['current_weather']
     
     return jsonify({
-        "city": "London", # <--- CHANGED NAME
+        "city": city.title(), # Capitalize (paris -> Paris)
         "temperature": current_weather['temperature'],
         "condition": get_weather_description(current_weather['weathercode'])
     })
@@ -91,5 +123,18 @@ def add_favorite():
 def home():
     return send_from_directory('.', 'index.html')
 
+# --- DELETE ENDPOINT ---
+# The <int:favorite_id> is crucial. It tells Flask to expect a number in the URL.
+@app.route('/api/favorites/<int:favorite_id>', methods=['DELETE'])
+def delete_favorite(favorite_id):
+    conn = get_db_connection()
+    
+    # Run the delete command for this specific ID
+    conn.execute('DELETE FROM favorites WHERE id = ?', (favorite_id,))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": "City deleted!"}), 200
+    
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

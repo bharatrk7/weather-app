@@ -9,7 +9,18 @@
         button { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px; margin-top: 10px;}
         button.save-btn { background-color: #28a745; }
         ul { list-style-type: none; padding: 0; }
-        li { background: #eee; margin: 5px 0; padding: 8px; border-radius: 4px; }
+      /* OLD: li { background: #eee; margin: 5px 0; padding: 8px; border-radius: 4px; } */
+        
+        /* NEW FLEXBOX STYLE */
+        li { 
+            background: #eee; 
+            margin: 5px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+            display: flex;              /* This aligns items in a row */
+            justify-content: space-between; /* Pushes Text left, Button right */
+            align-items: center;        /* Centers them vertically */
+        }
     </style>
 </head>
 <body>
@@ -19,10 +30,13 @@
     <div class="container">
         <div class="box">
             <h2>Current Weather</h2>
+            
+            <input type="text" id="city-input" placeholder="Enter city name" style="padding: 8px; width: 70%;">
+            
             <p>City: <span id="city-display">---</span></p>
             <p>Temp: <span id="temp-display">---</span></p>
             <p>Sky: <span id="sky-display">---</span></p>
-            <button onclick="getWeatherData()">Update Weather</button>
+            <button onclick="getWeatherData()">Search Weather</button>
             <br>
             <button class="save-btn" onclick="saveCity()">Save to Favorites</button>
         </div>
@@ -36,9 +50,16 @@
     </div>
 
     <script>
-        // 1. GET WEATHER (Existing Logic)
+        // 1. SEARCH WEATHER (Level 2 Logic)
         async function getWeatherData() {
-            const response = await fetch('/api/weather');
+            const cityInput = document.getElementById('city-input').value;
+            if (!cityInput) return alert("Please type a city name!");
+
+            // Send query to backend
+            const response = await fetch(`/api/weather?city=${cityInput}`);
+            
+            if (!response.ok) return alert("City not found!");
+
             const data = await response.json();
             
             document.getElementById('city-display').innerText = data.city;
@@ -46,46 +67,58 @@
             document.getElementById('sky-display').innerText = data.condition;
         }
 
-        // 2. SAVE CITY (New Logic)
-async function saveCity() {
+        // 2. SAVE CITY
+        async function saveCity() {
             const city = document.getElementById('city-display').innerText;
-            if (city === "---") return alert("Get weather first!");
+            if (city === "---") return alert("Search for a city first!");
 
-            console.log("Saving city:", city);
-            
             const response = await fetch('/api/favorites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ city: city })
             });
 
-            // 1. Unpack the message from the server
             const result = await response.json();
-
-            // 2. Show THAT message to the user
             alert(result.message);
             
-            // 3. Only refresh the list if it was actually a success (Status 201)
             if (response.status === 201) {
-                loadFavorites();
+                loadFavorites(); // Refresh list on success
             }
         }
-        // 3. LOAD FAVORITES (New Logic)
+
+        // 3. LOAD FAVORITES (With new HTML structure)
         async function loadFavorites() {
             const response = await fetch('/api/favorites');
             const cities = await response.json();
             
             const list = document.getElementById('favorites-list');
-            list.innerHTML = ""; // Clear current list
+            list.innerHTML = ""; 
             
             cities.forEach(item => {
                 const li = document.createElement('li');
-                li.innerText = item.city; // + " (ID: " + item.id + ")";
+                // We don't need 'float:right' anymore because CSS Flexbox handles it!
+                li.innerHTML = `
+                    <span>${item.city}</span>
+                    <button onclick="deleteCity(${item.id})" style="color: white; background: #dc3545; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Delete</button>
+                `;
                 list.appendChild(li);
             });
         }
+
+        // 4. DELETE CITY
+        async function deleteCity(id) {
+            console.log("Deleting ID:", id);
+            
+            // Send DELETE request to backend
+            await fetch(`/api/favorites/${id}`, {
+                method: 'DELETE'
+            });
+
+            // Refresh list immediately
+            loadFavorites();
+        }
         
-        // Load favorites when the page opens
+        // Load list when page opens
         loadFavorites();
     </script>
 </body>
