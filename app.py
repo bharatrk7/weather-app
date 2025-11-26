@@ -41,14 +41,15 @@ def get_weather_description(code):
 
 @app.route('/api/weather', methods=['GET'])
 def get_weather():
-    # Fetching NYC weather (In a real app, you'd pass the city name!)
-    url = "https://api.open-meteo.com/v1/forecast?latitude=40.71&longitude=-74.00&current_weather=true&temperature_unit=fahrenheit"
+    # CHANGED: London Coordinates
+    url = "https://api.open-meteo.com/v1/forecast?latitude=51.50&longitude=-0.12&current_weather=true&temperature_unit=fahrenheit"
+    
     response = requests.get(url)
     data = response.json()
     current_weather = data['current_weather']
     
     return jsonify({
-        "city": "New York",
+        "city": "London", # <--- CHANGED NAME
         "temperature": current_weather['temperature'],
         "condition": get_weather_description(current_weather['weathercode'])
     })
